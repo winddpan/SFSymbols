@@ -3,9 +3,11 @@ import SwiftUI
 struct SFSymbolsGrid: View {
     let symbols: [SFSymbol]
     @Binding var selection: String?
+    let selectedBackgroundColor: Color?
     let edgePadding: CGFloat
     let preferredItemSize: CGSize
     let itemSpacing: CGFloat
+    let itemCornerRadius: CGFloat
 
     @State private var columns: [GridItem] = []
     @State private var tileHeight: CGFloat = 45
@@ -20,7 +22,9 @@ struct SFSymbolsGrid: View {
                     SFSymbolTile(
                         scale: symbolTileScale,
                         systemName: symbol.name,
-                        isSelected: symbol.name == selection
+                        isSelected: symbol.name == selection,
+                        selectedBackgroundColor: selectedBackgroundColor,
+                        cornerRadius: round(itemCornerRadius * symbolTileScale)
                     )
                     .tint(.primary)
                     .frame(height: tileHeight)

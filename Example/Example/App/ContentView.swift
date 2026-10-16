@@ -1,4 +1,5 @@
 import SwiftUI
+import SFSymbols
 
 struct ContentView: View {
     private enum Example: Hashable {
@@ -7,6 +8,7 @@ struct ContentView: View {
     }
 
     @State private var selection: Example?
+    @State private var selectedColor: Color? = Color(red: 0.35, green: 0.45, blue: 0.65)
 
     var body: some View {
         NavigationSplitView {
@@ -28,7 +30,7 @@ struct ContentView: View {
             case .modalPicker:
                 ModalPickerDemoView()
             case .embeddedPicker:
-                EmbeddedPickerDemoView()
+                ColorSymbolPickerViewDemo()
             case nil:
                 Text("Select an example.")
                     .foregroundStyle(.secondary)
@@ -36,10 +38,25 @@ struct ContentView: View {
         }
         .navigationSplitViewStyle(.balanced)
         .onAppear {
-            #if os(macOS)
+#if os(macOS)
             selection = .modalPicker
-            #endif
+#endif
         }
+    }
+}
+
+private struct ColorSymbolPickerViewDemo: View {
+    @State private var selectedColor: Color? = Color(red: 0.35, green: 0.45, blue: 0.65)
+    @State private var selectedSymbol: String?
+    @State private var show = false
+
+    var body: some View {
+        Button {
+            show = true
+        } label: {
+            Text("xxx")
+        }
+        .colorSymbolPicker(isPresented: $show, selectedColor: $selectedColor, selectedSymbol: $selectedSymbol)
     }
 }
 

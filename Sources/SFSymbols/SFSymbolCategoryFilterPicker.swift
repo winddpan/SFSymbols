@@ -1,4 +1,7 @@
 import SwiftUI
+#if os(macOS)
+import AppKit
+#endif
 
 public struct SFSymbolCategoryFilterPicker: View {
     private let categories: [SFSymbolCategory]
@@ -14,7 +17,7 @@ public struct SFSymbolCategoryFilterPicker: View {
         selection: Binding<SFSymbolCategoryFilter>
     ) {
         self.categories = categories
-        self._selection = selection
+        _selection = selection
     }
 
     public var body: some View {
@@ -26,14 +29,14 @@ public struct SFSymbolCategoryFilterPicker: View {
                             selection = filter
                         } label: {
                             filter.image
-                                .font(.system(size: 16, weight: .semibold))
+                                .font(.system(size: 14, weight: .semibold))
                                 .foregroundStyle(.primary.opacity(selection == filter ? 1 : 0.8))
-                                .frame(width: 35, height: 35)
+                                .frame(width: 28, height: 28)
                         }
                         .buttonStyle(.plain)
                         .id(filter)
                         .tint(.primary)
-                        .frame(width: 44, height: 44)
+                        .frame(width: 35, height: 35)
                         .anchorPreference(
                             key: CategoryFilterItemBoundsKey.self,
                             value: .bounds
@@ -45,11 +48,15 @@ public struct SFSymbolCategoryFilterPicker: View {
                         if let anchor = anchors[selection] {
                             let rect = proxy[anchor]
                             SelectionIndicator()
+                                .frame(width: 28, height: 28)
                                 .position(x: rect.midX, y: rect.midY)
                                 .animation(.snappy(duration: 0.18), value: selection)
                         }
                     }
                 }
+#if os(macOS)
+                .modifier(CategoryFilterMouseDragSupport())
+#endif
             }
             .onChange(of: selection, initial: true) { _, newSelection in
                 if !didScrollToSelection {
@@ -58,27 +65,73 @@ public struct SFSymbolCategoryFilterPicker: View {
                 }
             }
         }
-        .clipShape(.capsule)
         .scrollIndicators(.never)
-        .frame(height: 44)
+        .frame(height: 35)
         .coordinateSpace(name: "CategoryFilterPicker")
-        .background {
-            #if os(visionOS)
-            RegularBackgroundView()
-            #else
-            if #available(iOS 26, visionOS 26, macOS 26, watchOS 26, *) {
-                GlassEffectBackgroundView()
-            } else {
-                RegularBackgroundView()
-            }
-            #endif
-        }
-        #if os(macOS)
-        .shadow(color: .black.opacity(0.1), radius: 6, y: 2)
-        #endif
         .selectionSensoryFeedback(trigger: selection)
     }
 }
+
+#if os(macOS)
+private struct CategoryFilterMouseDragSupport: ViewModifier {
+    @State private var reference = ScrollViewReference()
+    @GestureState private var dragStartOrigin: CGPoint?
+
+    func body(content: Content) -> some View {
+        content
+            .background(ScrollViewReaderView(reference: reference))
+            .contentShape(.rect)
+            .highPriorityGesture(
+                DragGesture(minimumDistance: 5, coordinateSpace: .global)
+                    .updating($dragStartOrigin) { value, origin, _ in
+                        guard let scrollView = reference.scrollView,
+                              let documentView = scrollView.documentView,
+                              abs(value.translation.width) > abs(value.translation.height)
+                        else {
+                            return
+                        }
+                        let clipView = scrollView.contentView
+                        let start = origin ?? clipView.bounds.origin
+                        origin = start
+                        let maxOffset = max(0, documentView.bounds.width - clipView.bounds.width)
+                        let offset = start.x - value.translation.width
+                        clipView.scroll(to: CGPoint(x: min(max(0, offset), maxOffset), y: start.y))
+                        scrollView.reflectScrolledClipView(clipView)
+                    }
+            )
+    }
+
+    @MainActor
+    final class ScrollViewReference {
+        weak var scrollView: NSScrollView?
+    }
+
+    struct ScrollViewReaderView: NSViewRepresentable {
+        let reference: ScrollViewReference
+
+        func makeNSView(context: Context) -> ReaderView {
+            let view = ReaderView()
+            view.reference = reference
+            return view
+        }
+
+        func updateNSView(_ nsView: ReaderView, context: Context) {}
+
+        final class ReaderView: NSView {
+            var reference: ScrollViewReference?
+
+            override func viewDidMoveToWindow() {
+                super.viewDidMoveToWindow()
+                reference?.scrollView = window == nil ? nil : enclosingScrollView
+            }
+
+            override func hitTest(_ point: NSPoint) -> NSView? {
+                nil
+            }
+        }
+    }
+}
+#endif
 
 private extension SFSymbolCategoryFilterPicker {
     struct SelectionIndicator: View {
@@ -96,36 +149,14 @@ private extension SFSymbolCategoryFilterPicker {
         }
 
         var body: some View {
-            Circle()
+            RoundedRectangle(cornerRadius: 6)
                 .foregroundStyle(selectionIndicatorColor)
-                .frame(width: 35, height: 35)
                 .allowsHitTesting(false)
-        }
-    }
-
-    @available(iOS 26, macOS 26, watchOS 26, *)
-    @available(visionOS, unavailable)
-    struct GlassEffectBackgroundView: View {
-        var body: some View {
-            Color.clear
-                .glassEffect(.regular.interactive(), in: .capsule)
-        }
-    }
-
-    struct RegularBackgroundView: View {
-        var body: some View {
-            Capsule()
-                #if os(watchOS)
-                .fill(regularMaterial)
-                #else
-                .fill(.bar)
-                #endif
-                .shadow(color: .black.opacity(0.1), radius: 4)
         }
     }
 }
 
-nonisolated private struct CategoryFilterItemBoundsKey: PreferenceKey {
+private nonisolated struct CategoryFilterItemBoundsKey: PreferenceKey {
     static let defaultValue: [SFSymbolCategoryFilter: Anchor<CGRect>] = [:]
 
     static func reduce(

@@ -5,6 +5,8 @@ public struct SFSymbolPickerGrid: View {
         public let edgePadding: CGFloat
         public let preferredItemSize: CGSize
         public let itemSpacing: CGFloat
+        /// The corner radius at the preferred item size, scaled with the actual item size.
+        public let itemCornerRadius: CGFloat
 
         static var modal: Self {
             #if canImport(UIKit)
@@ -18,21 +20,25 @@ public struct SFSymbolPickerGrid: View {
         public init(
             edgePadding: CGFloat = 0,
             preferredItemSize: CGSize = CGSize(width: 57, height: 45),
-            itemSpacing: CGFloat = 14
+            itemSpacing: CGFloat = 14,
+            itemCornerRadius: CGFloat = 12
         ) {
             self.edgePadding = edgePadding
             self.preferredItemSize = preferredItemSize
             self.itemSpacing = itemSpacing
+            self.itemCornerRadius = itemCornerRadius
         }
         #elseif os(macOS)
         public init(
             edgePadding: CGFloat = 0,
             preferredItemSize: CGSize = CGSize(width: 51, height: 41),
-            itemSpacing: CGFloat = 10
+            itemSpacing: CGFloat = 10,
+            itemCornerRadius: CGFloat = 12
         ) {
             self.edgePadding = edgePadding
             self.preferredItemSize = preferredItemSize
             self.itemSpacing = itemSpacing
+            self.itemCornerRadius = itemCornerRadius
         }
         #endif
     }
@@ -41,6 +47,7 @@ public struct SFSymbolPickerGrid: View {
     private let symbols: [SFSymbol]
     private let categoryFilter: SFSymbolCategoryFilter
     private let searchText: String
+    private let selectedBackgroundColor: Color?
     private let configuration: Configuration
     @State private var currentSymbols: [SFSymbol] = []
     @State private var searchTask: Task<Void, Never>?
@@ -53,12 +60,14 @@ public struct SFSymbolPickerGrid: View {
         symbols: [SFSymbol],
         categoryFilter: SFSymbolCategoryFilter = .all,
         searchText: String = "",
+        selectedBackgroundColor: Color? = nil,
         configuration: Configuration = Configuration()
     ) {
         self._selection = selection
         self.symbols = symbols
         self.categoryFilter = categoryFilter
         self.searchText = searchText
+        self.selectedBackgroundColor = selectedBackgroundColor
         self.configuration = configuration
     }
 
@@ -67,6 +76,7 @@ public struct SFSymbolPickerGrid: View {
         symbols: [SFSymbol],
         categoryFilter: SFSymbolCategoryFilter = .all,
         searchText: String = "",
+        selectedBackgroundColor: Color? = nil,
         configuration: Configuration = Configuration()
     ) {
         self._selection = Binding {
@@ -77,6 +87,7 @@ public struct SFSymbolPickerGrid: View {
         self.symbols = symbols
         self.categoryFilter = categoryFilter
         self.searchText = searchText
+        self.selectedBackgroundColor = selectedBackgroundColor
         self.configuration = configuration
     }
 
@@ -95,9 +106,11 @@ public struct SFSymbolPickerGrid: View {
                         SFSymbolsGrid(
                             symbols: currentSymbols,
                             selection: $selection,
+                            selectedBackgroundColor: selectedBackgroundColor,
                             edgePadding: configuration.edgePadding,
                             preferredItemSize: configuration.preferredItemSize,
-                            itemSpacing: configuration.itemSpacing
+                            itemSpacing: configuration.itemSpacing,
+                            itemCornerRadius: configuration.itemCornerRadius
                         )
                         .background(alignment: .top) {
                             Color.clear
